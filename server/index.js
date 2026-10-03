@@ -23,9 +23,30 @@ const broadcast = (msg) => { const raw = JSON.stringify(msg); for (const c of cl
 const record = (type, data = {}) => {
   // fire-and-forget: works with both sync (sqlite) and async (pg) adapters
   (async () => { try { await store.event(type, data); } catch (e) { console.error("[event]", e.message); } })();
+  if (type === "STAGE_REACHED") {
+    // A developmental milestone is worth remembering: it becomes a memory,
+    // which itself counts as lived experience.
+    (async () => {
+      try {
+        await store.memory(
+          `Developmental milestone: entered the ${data.stage} stage. ${data.shapedBy}.`,
+          organism.s, .7, "development", ["growth", "self"]
+        );
+        organism.noteMemory();
+      } catch (e) { console.error("[memory]", e.message); }
+    })();
+  }
   broadcast({ type: "event", event: { ts: Date.now(), type, data } });
 };
-const organism = new Organism(persisted.state, record);
+const organism = new Organism(persisted.state, record, { bornAt: persisted.born_at });
+
+// Reconcile the experience counter with memories that predate the growth
+// layer (e.g. the birth memory on a long-running organism). Never invents
+// experience — only counts what the database actually holds.
+try {
+  const dbMems = await store.countMemories();
+  if (dbMems > organism.s.growth.memories) organism.s.growth.memories = dbMems;
+} catch (e) { console.error("[growth]", e.message); }
 
 // Catch-up: age and homeostasis advance after downtime without inventing
 // memories. Ticks the proven coupling model in 2s steps, capped at 24h.
@@ -44,6 +65,7 @@ app.get("/api/snapshot", async (req, res) => {
     designation: "X5-ZZ21", bornAt: p.born_at, cycles,
     resting: organism.resting, llm: llmConfigured(),
     state: organism.s,
+    development: organism.developmentSummary(),
     memories: await store.memories(40),
     events: await store.events(40),
   });
@@ -74,6 +96,7 @@ app.post("/api/interact", async (req, res) => {
   // 1. stimulus hits the body/state FIRST
   organism.stimulus("message", { text });
   const mem = await store.memory(`Observer stimulus: "${text.slice(0, 160)}"`, organism.s, .55, "observer", ["observer", "language"]);
+  organism.noteMemory();
   record("MEMORY_FORMED", { memoryId: mem.id });
   // 2. cognition follows after a natural delay — the body reacts first
   record("COGNITION_STARTED", { memoryId: mem.id });
@@ -83,6 +106,7 @@ app.post("/api/interact", async (req, res) => {
     organism.s.reward = Math.min(1, organism.s.reward + .035);
     organism.noteCause("cognitive response");
     const m2 = await store.memory(`Cognitive response: "${response.slice(0, 160)}"`, organism.s, .42, "self", ["cognition", "observer"]);
+    organism.noteMemory();
     record("COGNITION_COMPLETED", { memoryId: m2.id, response, source });
   }, 900);
   res.json({ accepted: true, memory: mem });

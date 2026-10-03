@@ -39,6 +39,7 @@ export class SqliteStore {
     return { id: Number(r.lastInsertRowid), ...info };
   }
   memories(limit = 80) { return this.db.prepare("SELECT * FROM memories ORDER BY id DESC LIMIT ?").all(limit).map(x => ({ ...x, associations: JSON.parse(x.associations) })); }
+  countMemories() { return this.db.prepare("SELECT COUNT(*) AS c FROM memories").get().c; }
   memoryById(id) { const x = this.db.prepare("SELECT * FROM memories WHERE id=?").get(id); return x ? { ...x, associations: JSON.parse(x.associations) } : null; }
   events(limit = 80) { return this.db.prepare("SELECT * FROM events ORDER BY id DESC LIMIT ?").all(limit).map(x => ({ ...x, data: JSON.parse(x.data) })); }
   sampleHistory(state) {

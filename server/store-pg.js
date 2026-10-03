@@ -62,6 +62,11 @@ export class PgStore {
     return rows.map((x) => ({ ...x, id: Number(x.id), ts: Number(x.ts), associations: JSON.parse(x.associations) }));
   }
 
+  async countMemories() {
+    const { rows } = await this.pool.query("SELECT COUNT(*) AS c FROM memories");
+    return Number(rows[0].c);
+  }
+
   async memoryById(id) {
     const { rows } = await this.pool.query("SELECT * FROM memories WHERE id=$1", [id]);
     const x = rows[0];

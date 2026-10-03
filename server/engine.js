@@ -6,8 +6,12 @@
 // randomness drives state.
 //
 // Added: per-variable causal tracking (which events/reasons moved which
-// variable, for the "WHY IS IT FEELING THIS?" view) and an explicit
-// sleep/rest cycle driven by fatigue.
+// variable, for the "WHY IS IT FEELING THIS?" view), an explicit
+// sleep/rest cycle driven by fatigue, and developmental morphology — the
+// body plan is a pure, deterministic function of lived history (age,
+// experience counters, long-run emotional averages). See src/shared/growth.js.
+
+import { STAGES, stageIndexFor, formFor, developmentBlurb, ageDays, calmRatio, experience, hashSeed } from "../src/shared/growth.js";
 
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -17,7 +21,11 @@ export const GENESIS = {
   energy: .78, socialNeed: .35, novelty: .58, confidence: .42, fatigue: .12,
   stability: .72, reward: .20, threat: .08,
   dopamine: .44, serotonin: .54, cortisol: .20, oxytocin: .26,
-  attention: { x: 0, y: 0, intensity: 0 }, dominantDrive: "observe"
+  attention: { x: 0, y: 0, intensity: 0 }, dominantDrive: "observe",
+  // Developmental morphology. Counters accumulate in tick()/stimulus();
+  // form is recomputed deterministically from them every tick.
+  growth: { ageSec: 0, stimuli: 0, memories: 0, autonomous: 0, stressSum: 0, timeSum: 0, stageIndex: 0 },
+  form: null,
 };
 
 const targets = {
@@ -31,9 +39,17 @@ const CAUSE_THRESHOLD = 0.0008; // min |delta| per tick to record a cause
 const CAUSE_KEEP = 12;
 
 export class Organism {
-  constructor(state, emit) {
+  constructor(state, emit, opts = {}) {
     this.s = { ...GENESIS, ...state };
+    // growth must be a fresh object per organism — never mutate GENESIS
+    this.s.growth = { ...GENESIS.growth, ...(state.growth || {}) };
     this.emit = emit;
+    // Seed is derived from the true birth timestamp: unique per organism,
+    // fully deterministic. Drives idiosyncratic form details (lobe phase,
+    // wear-mark placement) — never state.
+    this.bornAt = opts.bornAt || Date.now();
+    this.seed = hashSeed(String(this.bornAt));
+    this.s.form = formFor(this.s.growth, this.seed);
     this.last = Date.now();
     this.lastAutonomy = Date.now();
     this.resting = false;
@@ -50,6 +66,29 @@ export class Organism {
 
   causesFor(key) {
     return (this.causes[key] || []).slice().reverse();
+  }
+
+  /** A memory was formed (called by the server after each store.memory). */
+  noteMemory() {
+    this.s.growth.memories++;
+  }
+
+  /** Honest developmental readout for the UI — real counters only. */
+  developmentSummary() {
+    const g = this.s.growth;
+    const si = stageIndexFor(g);
+    return {
+      stage: STAGES[si].name,
+      stageIndex: si,
+      ageDays: Math.round(ageDays(g) * 100) / 100,
+      experience: Math.round(experience(g) * 10) / 10,
+      stimuli: g.stimuli,
+      memories: g.memories,
+      autonomous: g.autonomous,
+      calmRatio: Math.round(calmRatio(g) * 1000) / 1000,
+      blurb: developmentBlurb(g),
+      form: this.s.form,
+    };
   }
 
   _recordCauses(before, now) {
@@ -115,10 +154,29 @@ export class Organism {
     };
     s.dominantDrive = Object.entries(driveScores).sort((a, b) => b[1] - a[1])[0][0];
 
+    // --- developmental growth: slow, deterministic, persisted ---
+    // Counters accumulate here, so downtime catch-up ticks age the body too.
+    const g = s.growth;
+    g.ageSec += dt;
+    g.timeSum += dt;
+    g.stressSum += s.stress * dt;
+    s.form = formFor(g, this.seed);
+    // Stage transitions are monotonic and each emits its own event.
+    const targetStage = stageIndexFor(g);
+    while (g.stageIndex < targetStage) {
+      g.stageIndex++;
+      this.emit("STAGE_REACHED", {
+        stage: STAGES[g.stageIndex].name,
+        stageIndex: g.stageIndex,
+        shapedBy: developmentBlurb(g),
+      });
+    }
+
     this._recordCauses(before, now);
 
     if (now - this.lastAutonomy > 12000) {
       this.lastAutonomy = now;
+      s.growth.autonomous++;
       const drive = s.dominantDrive;
       const text = {
         rest: "Internal activity reduced; conserving energy.",
@@ -135,6 +193,7 @@ export class Organism {
 
   stimulus(kind, payload = {}) {
     const s = this.s;
+    s.growth.stimuli++; // every contact, of any kind, is lived experience
     // record a directly-applied delta in the causal ledger
     const apply = (key, delta, reason) => {
       const before = s[key];
