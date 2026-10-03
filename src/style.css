@@ -12,3 +12,11 @@ nav{position:absolute;z-index:5;left:50%;transform:translateX(-50%);bottom:25px;
 .memwrap{right:28px;top:76px;bottom:170px;width:420px;padding:0;overflow:hidden;display:flex;flex-direction:column}.memcanvas{flex:1;width:100%;cursor:pointer}.memdetail{border-top:1px solid #132326;padding:11px 13px}.memdetail p{font-size:10px;line-height:1.5;color:#b8cbcc;margin:6px 0}.memdetail small,.memdetail span{display:block;font-size:8px;color:#597174;margin-top:3px}
 .events{right:28px;top:76px;bottom:170px;width:340px;overflow:auto;padding:10px}.events article{border-bottom:1px solid #122023;padding:8px}.events p{margin:2px 0;font-size:9px;color:#a9c7c7}.events small{font-size:8px;color:#597174}.events span{display:block;font-size:9px;color:#71898c;margin-top:2px}
 .empty{padding:20px;font-size:9px;color:#597174}.rest{color:#d8a05a!important;border:1px solid #5a452a;padding:2px 6px}
+@media (max-width:640px){
+  header{left:16px;right:16px;top:16px;gap:14px;font-size:9px}
+  .drive{left:16px;bottom:auto;top:66px}
+  .dev{left:16px;bottom:auto;top:102px;max-width:64vw}
+  .interact{width:calc(100vw - 32px)}
+  nav{bottom:16px;max-width:calc(100vw - 32px);overflow-x:auto}
+  .state,.memories,.memwrap,.events{right:16px;left:16px;width:auto}
+}
