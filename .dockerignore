@@ -1,0 +1,7 @@
+node_modules
+.git
+dist
+organism.db
+organism.db-shm
+organism.db-wal
+*.log
