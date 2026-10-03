@@ -45,6 +45,7 @@ src/main.jsx         Canvas organism + layered views (organism / nervous / state
 - Stimulus → body/state reacts first → delayed cognition (900 ms) → language.
 - Rest cycle: fatigue > 0.8 triggers REST, recovery until < 0.35.
 - Developmental morphology: the body plan (membrane lobes, filament/vessel counts, core depth, asymmetry, wear marks, hue depth, ridges) is a pure deterministic function of lived history — chronological age, experience counters (stimuli, memories, autonomous events), and long-run emotional averages. No randomness; per-organism idiosyncrasies come from a seed hashed from the birth timestamp. Named stages (nascent → juvenile → mature → elder) emit `STAGE_REACHED` events and form memories. The UI shows a live DEVELOPMENT readout derived from real counters.
+- Autonomous inner life: every 30 s a salience evaluator (`server/salience.js`) notices notable inner experience — threshold crossings (stress spike, energy crash, trust milestone), completed rest with real from/to numbers, sustained unusual states, drive shifts toward need, long stillness — and forms at most one episodic memory (`source: "autonomous"`, importance 0.3–0.7, rate-capped at ~1 per 4 min). Summaries are observational and state-derived; the LLM is never called on a timer, so it costs nothing.
 
 ## Deliberately not faked
 
@@ -56,7 +57,7 @@ src/main.jsx         Canvas organism + layered views (organism / nervous / state
 
 ## Verified in this sandbox
 
-- `npm test`: 24/24 pass (engine coupling, threat pathway, homeostasis convergence, decay, determinism, causality, rest cycle, growth determinism/monotonicity/stages/weathering/merge, birth/memory/event/history/save-load).
+- `npm test`: 30/30 pass (engine coupling, threat pathway, homeostasis convergence, decay, determinism, causality, rest cycle, growth determinism/monotonicity/stages/weathering/merge, autonomy flatline/spike/rate-cap/restart/rest-numbers/quiet, birth/memory/event/history/save-load).
 - Server boots, ticks with zero clients, WS streams ~10 Hz state snapshots.
 - Restart test: same birth timestamp, cycles advanced, `DOWNTIME_CATCHUP` logged, memories preserved.
 - better-sqlite3 v13 (prebuilt for Node 24). Postgres adapter verified against live Postgres on the Render deploy (`[store] postgres (persistent)`, birth memory intact).
