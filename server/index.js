@@ -12,6 +12,7 @@ import { WebSocketServer } from "ws";
 import { createStore } from "./store.js";
 import { Organism } from "./engine.js";
 import { generateReply, llmConfigured } from "./llm.js";
+import { createSalienceTracker, evaluateSalience, noteObserverContact, isContactEvent } from "./salience.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -20,9 +21,14 @@ let persisted = await store.load();
 let cycles = persisted.cycles;
 const clients = new Set();
 const broadcast = (msg) => { const raw = JSON.stringify(msg); for (const c of clients) if (c.readyState === 1) c.send(raw); };
+// Autonomous inner life: salience tracker for the organism's own memories.
+// Created before record() so the event path can mark observer contact.
+const salienceTracker = createSalienceTracker();
 const record = (type, data = {}) => {
   // fire-and-forget: works with both sync (sqlite) and async (pg) adapters
   (async () => { try { await store.event(type, data); } catch (e) { console.error("[event]", e.message); } })();
+  // Genuine outside contact resets the stillness clock (inner events don't).
+  if (isContactEvent(type)) noteObserverContact(salienceTracker, Date.now());
   if (type === "STAGE_REACHED") {
     // A developmental milestone is worth remembering: it becomes a memory,
     // which itself counts as lived experience.
@@ -47,6 +53,19 @@ try {
   const dbMems = await store.countMemories();
   if (dbMems > organism.s.growth.memories) organism.s.growth.memories = dbMems;
 } catch (e) { console.error("[growth]", e.message); }
+
+// Seed the salience tracker's baselines from real history: the rate cap
+// resumes from the last autonomous memory, and the stillness clock from the
+// last genuine observer contact — so a restart never invents a "long quiet"
+// out of its own downtime, nor double-fires a recent memory.
+try {
+  const recentMems = await store.memories(80);
+  const lastAuto = recentMems.find((m) => m.source === "autonomous");
+  if (lastAuto) salienceTracker.lastMemoryTs = lastAuto.ts;
+  const recentEvts = await store.events(200);
+  const lastContact = Math.max(0, ...recentEvts.filter((e) => isContactEvent(e.type)).map((e) => e.ts));
+  salienceTracker.stillnessSinceTs = Math.max(lastContact, recentMems[0]?.ts || 0, persisted.born_at);
+} catch (e) { console.error("[salience]", e.message); }
 
 // Catch-up: age and homeostasis advance after downtime without inventing
 // memories. Ticks the proven coupling model in 2s steps, capped at 24h.
@@ -141,6 +160,14 @@ setInterval(async () => {
     await store.sampleHistory(organism.s);
   } catch (e) { console.error("[save]", e.message); }
 }, 2000);
+
+// Autonomous inner life: every 30s, notice whether anything in the
+// organism's own experience was worth remembering. Local, deterministic,
+// free — the LLM is never called on a timer.
+setInterval(() => {
+  evaluateSalience({ organism, tracker: salienceTracker, store, record })
+    .catch((e) => console.error("[salience]", e.message));
+}, 30000);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.resolve(here, "../dist");
