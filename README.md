@@ -6,7 +6,7 @@ One organism. Server-side simulation. Browsers observe; they never own it.
 
 ```bash
 npm install
-npm test            # 14 tests: engine, homeostasis, causality, rest, store
+npm test            # 24 tests: engine, homeostasis, causality, rest, growth, store
 npm run build       # build the frontend
 npm start           # organism server on http://localhost:8787
 ```
@@ -26,7 +26,7 @@ Dev mode: `npm run dev` (server with `--watch` + Vite on :5173).
 
 ```
 server/index.js      Express + ws. 10 Hz sim tick, 2 s persist, WS broadcast.
-server/engine.js     Organism: coupled homeostatic variables + causality ledger + rest cycle.
+server/engine.js     Organism: coupled homeostatic variables + causality ledger + rest cycle + developmental growth (see `src/shared/growth.js`).
 server/store.js      Factory: Postgres when DATABASE_URL set, else SQLite.
 server/store-sqlite.js / store-pg.js   Same conventions, sync vs async (server awaits both).
 server/llm.js        Language organ: provider interface + transparent fallback.
@@ -44,6 +44,7 @@ src/main.jsx         Canvas organism + layered views (organism / nervous / state
 - Restart: same birth timestamp, catch-up ticks over downtime (capped 24 h), `DOWNTIME_CATCHUP` logged.
 - Stimulus → body/state reacts first → delayed cognition (900 ms) → language.
 - Rest cycle: fatigue > 0.8 triggers REST, recovery until < 0.35.
+- Developmental morphology: the body plan (membrane lobes, filament/vessel counts, core depth, asymmetry, wear marks, hue depth, ridges) is a pure deterministic function of lived history — chronological age, experience counters (stimuli, memories, autonomous events), and long-run emotional averages. No randomness; per-organism idiosyncrasies come from a seed hashed from the birth timestamp. Named stages (nascent → juvenile → mature → elder) emit `STAGE_REACHED` events and form memories. The UI shows a live DEVELOPMENT readout derived from real counters.
 
 ## Deliberately not faked
 
@@ -55,10 +56,10 @@ src/main.jsx         Canvas organism + layered views (organism / nervous / state
 
 ## Verified in this sandbox
 
-- `npm test`: 14/14 pass (engine coupling, threat pathway, homeostasis convergence, decay, determinism, causality, rest cycle, birth/memory/event/history/save-load).
+- `npm test`: 24/24 pass (engine coupling, threat pathway, homeostasis convergence, decay, determinism, causality, rest cycle, growth determinism/monotonicity/stages/weathering/merge, birth/memory/event/history/save-load).
 - Server boots, ticks with zero clients, WS streams ~10 Hz state snapshots.
 - Restart test: same birth timestamp, cycles advanced, `DOWNTIME_CATCHUP` logged, memories preserved.
-- better-sqlite3 v13 (prebuilt for Node 24). Postgres adapter written against the `pg` API and kept in interface parity with SQLite, but **not run against a live Postgres here** — no Postgres was available in this sandbox. The SQL is standard and the schema mirrors SQLite's; verify against real Postgres before production use.
+- better-sqlite3 v13 (prebuilt for Node 24). Postgres adapter verified against live Postgres on the Render deploy (`[store] postgres (persistent)`, birth memory intact).
 
 ## Known simplifications
 
