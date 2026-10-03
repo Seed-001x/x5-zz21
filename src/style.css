@@ -1,22 +1,41 @@
 *{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%;background:#020506;color:#b9ced0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden}
 main{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 48%,#071215 0,#020506 47%,#010202 100%)}
 header{position:absolute;z-index:5;left:30px;right:30px;top:24px;display:flex;gap:28px;align-items:center;font-size:10px;letter-spacing:.16em;color:#688084}header b{font-size:13px;color:#d7ebeb}header i{margin-left:auto;color:#8bb8ad;font-style:normal}
-.body{position:absolute;inset:0;width:100%;height:100%}.drive{position:absolute;left:30px;bottom:84px;font-size:9px;letter-spacing:.14em;color:#53676a}.drive strong{display:block;color:#a9c7c7;margin-top:5px}
+.body{position:absolute;inset:0;width:100%;height:100%;touch-action:manipulation}.drive{position:absolute;left:30px;bottom:84px;font-size:9px;letter-spacing:.14em;color:#53676a}.drive strong{display:block;color:#a9c7c7;margin-top:5px}
 .dev{position:absolute;left:30px;bottom:126px;font-size:9px;letter-spacing:.14em;color:#53676a;max-width:44vw}.dev strong{display:block;color:#a9c7c7;margin-top:5px;font-weight:normal;line-height:1.6}
-nav{position:absolute;z-index:5;left:50%;transform:translateX(-50%);bottom:25px;display:flex;gap:6px}button{background:#071012;border:1px solid #18282b;color:#71898c;padding:9px 12px;font:9px ui-monospace;letter-spacing:.11em;cursor:pointer}button:hover,.on{color:#d7eeee;border-color:#526f73;background:#0b1719}
+nav{position:absolute;z-index:5;left:50%;transform:translateX(-50%);bottom:25px;display:flex;gap:6px}button{background:#071012;border:1px solid #18282b;color:#71898c;padding:9px 12px;font:9px ui-monospace;letter-spacing:.11em;cursor:pointer;touch-action:manipulation}button:hover,.on{color:#d7eeee;border-color:#526f73;background:#0b1719}
 .glass{position:absolute;z-index:4;background:rgba(3,9,10,.72);backdrop-filter:blur(16px);border:1px solid #132326;box-shadow:0 20px 80px #0008}
 .state{right:28px;top:76px;width:245px;padding:15px}.state div{display:grid;grid-template-columns:1fr 52px;position:relative;padding:9px 0 12px;font-size:9px}.state b{text-align:right;color:#d2e5e5}.state em{position:absolute;left:0;bottom:5px;height:1px;background:#7ba0a5;transition:width .15s}
 .memories{right:28px;top:76px;bottom:90px;width:360px;overflow:auto;padding:10px}.memories article{border-bottom:1px solid #122023;padding:11px 8px}.memories small,.memories span{font-size:8px;color:#597174}.memories p{font-size:10px;line-height:1.5;color:#b8cbcc}
 .interact{position:absolute;z-index:6;left:50%;transform:translateX(-50%);bottom:70px;width:min(520px,70vw)}.interact>div{display:flex}.interact input{flex:1;background:#03090a;border:1px solid #17282b;color:#d3e5e5;padding:12px;outline:none;font:11px ui-monospace}.reply{background:#03090acc;border-left:1px solid #688b8f;padding:12px;font-size:10px;line-height:1.5;color:#a9c0c1}.state div.sel{background:#0b1719}.state .why{margin-top:8px;border-top:1px solid #132326;padding-top:10px}.state .why h4{margin:0 0 8px;font-size:9px;letter-spacing:.12em;color:#a9c7c7}.state .why p{margin:6px 0;font-size:9px;line-height:1.4;color:#9db5b6}.state .why small{color:#597174}
 .wave{width:100%;height:64px;display:block;margin:4px 0 8px;background:#02090a;border:1px solid #101e21}
-.memwrap{right:28px;top:76px;bottom:170px;width:420px;padding:0;overflow:hidden;display:flex;flex-direction:column}.memcanvas{flex:1;width:100%;cursor:pointer}.memdetail{border-top:1px solid #132326;padding:11px 13px}.memdetail p{font-size:10px;line-height:1.5;color:#b8cbcc;margin:6px 0}.memdetail small,.memdetail span{display:block;font-size:8px;color:#597174;margin-top:3px}
+.memwrap{right:28px;top:76px;bottom:170px;width:420px;padding:0;overflow:hidden;display:flex;flex-direction:column}.memcanvas{flex:1;width:100%;cursor:pointer;touch-action:manipulation}.memdetail{border-top:1px solid #132326;padding:11px 13px}.memdetail p{font-size:10px;line-height:1.5;color:#b8cbcc;margin:6px 0}.memdetail small,.memdetail span{display:block;font-size:8px;color:#597174;margin-top:3px}
 .events{right:28px;top:76px;bottom:170px;width:340px;overflow:auto;padding:10px}.events article{border-bottom:1px solid #122023;padding:8px}.events p{margin:2px 0;font-size:9px;color:#a9c7c7}.events small{font-size:8px;color:#597174}.events span{display:block;font-size:9px;color:#71898c;margin-top:2px}
 .empty{padding:20px;font-size:9px;color:#597174}.rest{color:#d8a05a!important;border:1px solid #5a452a;padding:2px 6px}
 @media (max-width:640px){
-  header{left:16px;right:16px;top:16px;gap:14px;font-size:9px}
+  /* dynamic viewport: with interactive-widget=resizes-content the iOS
+     keyboard shrinks the layout viewport, so the absolute-positioned
+     stimulus bar rides up instead of being covered */
+  html,body,#root{height:100%;height:100dvh}
+  header{left:16px;right:16px;top:16px;gap:14px;font-size:9px;flex-wrap:wrap;row-gap:6px}
   .drive{left:16px;bottom:auto;top:66px}
   .dev{left:16px;bottom:auto;top:102px;max-width:64vw}
+  /* bottom-sheet panels: the body stays visible above, long content scrolls */
+  .state,.memories,.memwrap,.events{right:16px;left:16px;width:auto;top:auto;bottom:150px;height:min(52dvh,480px)}
+  .state{overflow-y:auto}
+  .state div{padding:16px 0 18px}
+  .memdetail p{font-size:11px}
+  .memdetail{max-height:50%;overflow-y:auto}
   .interact{width:calc(100vw - 32px)}
-  nav{bottom:16px;max-width:calc(100vw - 32px);overflow-x:auto}
-  .state,.memories,.memwrap,.events{right:16px;left:16px;width:auto}
+  .interact input{min-height:44px;font-size:16px}
+  .interact button{min-height:44px}
+  /* all five tabs visible: compact two-line labels, 44px tap height */
+  nav{bottom:16px;left:16px;right:16px;transform:none;max-width:none;gap:4px}
+  nav button{flex:1 1 0;min-width:0;min-height:44px;padding:8px 2px;font-size:8px;letter-spacing:.04em;text-align:center;line-height:1.5;white-space:normal}
+}
+/* short landscape phones: keep the sheet clear of the stimulus bar */
+@media (max-width:640px) and (max-height:500px){
+  .state,.memories,.memwrap,.events{bottom:125px;height:150px}
+  .drive{top:52px}
+  .dev{display:none}
 }

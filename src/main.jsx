@@ -285,6 +285,31 @@ function MemoryView() {
     fetch(`/api/memories/${sel}`).then((r) => r.json()).then(setDetail).catch(() => setDetail(null));
   }, [sel]);
   const layout = useRef(new Map());
+  const detailRef = useRef(null);
+  const lastTouchSel = useRef(0);
+  const touchStart = useRef(null);
+  // nearest-node hit test; wider radius on coarse (touch) pointers
+  const selectAt = (mx, my) => {
+    const coarse = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer:coarse)").matches;
+    const rad2 = (coarse ? 64 : 50) ** 2;
+    let best = null, bd = 1e9;
+    for (const m of mems) {
+      const p = layout.current.get(m.id); if (!p) continue;
+      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+      if (d < bd) { bd = d; best = m.id; }
+    }
+    if (best && bd < rad2) setSel((prev) => (prev === best ? null : best));
+  };
+  const tapAt = (cx, cy, node) => {
+    const r = node.getBoundingClientRect();
+    selectAt(cx - r.left, cy - r.top);
+  };
+  // keep the detail visible when a node is selected on small screens
+  useEffect(() => {
+    if (sel && detailRef.current) {
+      try { detailRef.current.scrollIntoView({ block: "nearest" }); } catch { /* noop */ }
+    }
+  }, [sel]);
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d");
@@ -328,19 +353,26 @@ function MemoryView() {
   }, [mems, sel]);
   return (
     <section className="glass memwrap">
-      <canvas ref={ref} className="memcanvas" onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        const mx = e.clientX - r.left, my = e.clientY - r.top;
-        let best = null, bd = 1e9;
-        for (const m of mems) {
-          const p = layout.current.get(m.id); if (!p) continue;
-          const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
-          if (d < bd) { bd = d; best = m.id; }
-        }
-        if (best && bd < 2500) setSel(sel === best ? null : best);
-      }} />
+      <canvas ref={ref} className="memcanvas"
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+        }}
+        onTouchEnd={(e) => {
+          const s = touchStart.current; touchStart.current = null;
+          if (!s) return;
+          const t = e.changedTouches[0];
+          if (Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) return; // drag/pinch, not a tap
+          if (Date.now() - s.t > 300) return; // long-press, not a tap
+          lastTouchSel.current = Date.now();
+          tapAt(t.clientX, t.clientY, e.currentTarget);
+        }}
+        onClick={(e) => {
+          if (Date.now() - lastTouchSel.current < 500) return; // synthetic click after touch
+          tapAt(e.clientX, e.clientY, e.currentTarget);
+        }} />
       {detail && (
-        <article className="memdetail">
+        <article ref={detailRef} className="memdetail">
           <small>MEMORY #{detail.id} · {timeStr(detail.ts)}</small>
           <p>{detail.summary}</p>
           <span>V {Number(detail.valence ?? 0).toFixed(2)} · A {Number(detail.arousal ?? 0).toFixed(2)} · IMPORTANCE {Number(detail.importance ?? 0).toFixed(2)}</span>
